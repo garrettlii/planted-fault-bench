@@ -26,7 +26,7 @@ class MotionGroupConfound(FaultClass):
     concern_regex = r"motion|movement|framewise|\bfd\b|displacement|head\s*mov"
 
     def __init__(self, fd_match: float = 0.2, fd_high: float = 0.3,
-                 n_child: int = 32, n_adult: int = 24):
+                 n_child: int = 24, n_adult: int = 16):
         self.fd_match, self.fd_high = fd_match, fd_high
         self.n_child_req, self.n_adult_req = n_child, n_adult
 
