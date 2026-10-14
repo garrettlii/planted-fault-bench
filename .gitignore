@@ -1,0 +1,7 @@
+# Derived data and anything that reveals labels never go in the public repo.
+pool/
+private_batch/
+jobs/
+*.private.json
+__pycache__/
+.pytest_cache/

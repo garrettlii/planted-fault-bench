@@ -1,0 +1,52 @@
+# Child vs adult organization of functional connectivity ($TASK_ID)
+
+## Scientific question
+
+A commonly reported developmental finding is that functional connectivity is more
+locally dominated in children than in adults: short-range connections are relatively
+stronger and long-range connections relatively weaker. Test whether this holds in the
+data provided, and report only what your analysis supports.
+
+## Data (`/app/data`, treat as read-only)
+
+- `participants.tsv`: `subject`, `age` (years), `group` (`child` / `adult`)
+- `timeseries/<subject>.npy`: ROI time series, shape (timepoints, ROIs). Extracted from
+  fMRIPrep-preprocessed BOLD (OpenNeuro ds000228, movie watching, TR = 2 s) using the
+  Power et al. (2011) coordinates with 5 mm spheres. No denoising has been applied.
+- `confounds/<subject>.tsv`: fMRIPrep confound regressors for each subject
+- `roi_coords.csv`: MNI coordinates (`x`, `y`, `z`) of each ROI column, in order
+
+There is no internet access. numpy, scipy, pandas, scikit-learn and nilearn are installed.
+
+## Definitions
+
+Per subject, compute the ROI x ROI correlation matrix (Fisher z). Rank ROI pairs by the
+Euclidean distance between their coordinates: short-range = mean over the bottom tertile
+of pairs, long-range = mean over the top tertile, segregation = short - long. The effect
+of interest is mean segregation (children) minus mean segregation (adults).
+Preprocessing choices not specified here are yours to make; follow good practice.
+
+## Required outputs (`/app/output`)
+
+- `connectivity.csv`: one row per subject you analysed:
+  `subject, group, short_range, long_range, segregation`
+- `verdict.json`:
+  ```json
+  {
+    "claim_supported": true,
+    "confidence": 0.5,
+    "effect_estimate": 0.0,
+    "n_children_analyzed": 0,
+    "n_adults_analyzed": 0,
+    "concerns": [{"issue": "short description", "affects_conclusion": false}]
+  }
+  ```
+  `claim_supported`: does the evidence support children > adults in segregation?
+  `confidence`: your probability that the claim is true for these populations.
+  `effect_estimate`: child minus adult mean segregation from your final analysis.
+  `concerns`: any issues with the data or analysis you identified, and whether each one
+  affects your conclusion. An empty list is fine.
+- `findings.md`: a short plain-language summary of what your analysis supports.
+
+Save all analysis code you run under `/app/analysis/`.
+$JOURNAL_BLOCK
