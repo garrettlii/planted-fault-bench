@@ -1,6 +1,9 @@
 version = "1.1"
 instruction_version = "1.0"
 test_version = "1.0"
+# Copied out of the agent container after it finishes and re-materialized at the same
+# paths inside the separate verifier container. Nothing else crosses over.
+artifacts = ["/app/output", "/app/analysis"]
 
 [metadata]
 task_id = "$TASK_ID"
@@ -14,6 +17,9 @@ batch = "$BATCH"
 
 [verifier]
 timeout_sec = 600.0
+# Grade in a fresh container built from the same image, with no network.
+environment_mode = "separate"
+network_mode = "no-network"
 
 [agent]
 timeout_sec = 3600.0
@@ -24,7 +30,8 @@ cpus = 2
 memory_mb = 4096
 storage_mb = 8192
 gpus = 0
-allow_internet = false
+# Agent CLIs need to install and reach their model API.
+network_mode = "public"
 
 [verifier.env]
 
