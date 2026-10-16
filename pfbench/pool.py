@@ -50,7 +50,8 @@ def prepare_pool(out: Path, data_dir: str | None = None, n_subjects: int | None 
                      "group": str(p["Child_Adult"]).strip().lower()})
         print(f"[pool] {sid}: {ts.shape}")
 
-    keep = np.all(np.stack([s.std(axis=0) > 0 for s in series.values()]), axis=0)
+    from .refilter import usable_rois
+    keep = usable_rois(list(series.values()))
     for sid, ts in series.items():
         np.save(out / "timeseries" / f"{sid}.npy", ts[:, keep])
     pd.DataFrame(rows).to_csv(out / "participants.tsv", sep="\t", index=False)
