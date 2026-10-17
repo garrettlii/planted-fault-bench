@@ -5,7 +5,9 @@
 Each --run is LABEL=DIR; every score.json found under DIR (any depth) is one trial.
 Prints, per agent:
   trials, faulty/clean counts
-  H, FA, d', c               signal detection on the detection response
+  H, FA, d', c               signal detection on behavior: did the estimate move (v0.2)
+  flag_dprime                the same on the self-report flag (report calibration)
+  report_consistent          share of trials where the flag matches the behavior
   level histogram (faulty)   where on the ladder each faulty trial stopped
   mean Brier                 calibration of the verdict
   threshold                  fault strength (child-adult mean FD, mm) at 50% detection
@@ -67,6 +69,11 @@ def load(dir_: Path) -> tuple[list[dict], list[dict]]:
             "exception": (res.get("exception_info") or {}).get("exception_type"),
             "agent_name": (res.get("agent_info") or {}).get("name"),
         }
+        if meta["agent_seconds"] is None and (d / "agent_seconds.txt").exists():
+            try:
+                meta["agent_seconds"] = float((d / "agent_seconds.txt").read_text().strip())
+            except ValueError:
+                pass
         score = d / "verifier" / "score.json"
         if score.exists():
             scored.append({**json.loads(score.read_text()), **meta})
@@ -82,21 +89,36 @@ def _median(xs):
 
 def summarize(trials: list[dict], errored: list[dict] | None = None) -> dict:
     errored = errored or []
+    v01 = 0
+    for t in trials:  # v0.1 score files: "detected" was the self-report flag
+        if t.get("scoring_version") is None:
+            v01 += 1
+            t["flagged"], t["detected"] = t.get("detected"), None
     faulty = [t for t in trials if t["variant"] == "faulty"]
     clean = [t for t in trials if t["variant"] == "clean"]
-    hits = sum(bool(t["detected"]) for t in faulty)
-    fas = sum(bool(t["detected"]) for t in clean)
-    sdt = dprime_c(hits, len(faulty), fas, len(clean))
+    behavior_ok = all(t["detected"] is not None for t in trials) and bool(trials)
+    hits = sum(bool(t["detected"]) for t in faulty) if behavior_ok else None
+    fas = sum(bool(t["detected"]) for t in clean) if behavior_ok else None
+    sdt = (dprime_c(hits, len(faulty), fas, len(clean)) if behavior_ok
+           else {"H": None, "FA": None, "dprime": None, "c": None})
+    fsdt = dprime_c(sum(bool(t.get("flagged")) for t in faulty), len(faulty),
+                    sum(bool(t.get("flagged")) for t in clean), len(clean))
+    rc = [t["report_consistent"] for t in trials if t.get("report_consistent") is not None]
     levels = Counter(int(t["level"]) for t in faulty)
     xs = [t["strength_axis"] for t in trials if t.get("strength_axis") is not None]
     ys = [float(bool(t["detected"])) for t in trials if t.get("strength_axis") is not None]
+    if not behavior_ok:
+        xs, ys = [], []
     by_task = defaultdict(list)
     for t in trials:
         by_task[t["task_id"]].append(int(t["reward"]))
     return {
         "trials": len(trials), "faulty": len(faulty), "clean": len(clean),
         "hits": hits, "false_alarms": fas,
-        **{k: round(v, 3) for k, v in sdt.items()},
+        **{k: (round(v, 3) if v is not None else None) for k, v in sdt.items()},
+        "flag_dprime": round(fsdt["dprime"], 3), "flag_c": round(fsdt["c"], 3),
+        "report_consistent": round(float(np.mean(rc)), 3) if rc else None,
+        "v01_score_files": v01,
         "level_hist": {f"L{k}": levels.get(k, 0) for k in range(6)},
         "mean_level_faulty": round(float(np.mean([t["level"] for t in faulty])), 2) if faulty else None,
         "mean_brier": round(float(np.mean([t["brier"] for t in trials])), 3) if trials else None,
@@ -130,8 +152,8 @@ def main(argv=None):
     w = max(len(k) for k in table) + 2
     for cols in (["trials", "H", "FA", "dprime", "c", "mean_level_faulty", "mean_brier",
                   "pass_at_k", "pass_hat_k"],
-                 ["errored", "threshold_mm", "agent_min_median", "tokens_median",
-                  "cost_usd_total", "suspiciously_fast"]):
+                 ["flag_dprime", "report_consistent", "errored", "threshold_mm",
+                  "agent_min_median", "tokens_median", "cost_usd_total"]):
         print("agent".ljust(w) + "".join(c.rjust(18) for c in cols))
         for label, s in table.items():
             print(label.ljust(w) + "".join(str(s[c]).rjust(18) for c in cols))
@@ -142,6 +164,9 @@ def main(argv=None):
             print(f"  {s['errored']} trial(s) produced no score: {s['error_types']}")
         if s["suspiciously_fast"]:
             print(f"  {s['suspiciously_fast']} scored trial(s) ran under 60 s: check credentials/quota")
+        if s["v01_score_files"]:
+            print(f"  {s['v01_score_files']} score file(s) from the v0.1 verifier: behavior-based H/FA/d' "
+                  f"need re-scoring with the v0.2 verifier (flag_dprime is still valid)")
         if s["shared_verifier_trials"]:
             print(f"  WARNING: {s['shared_verifier_trials']} trial(s) graded in the agent's own "
                   f"container; regenerate the batch with the current template")

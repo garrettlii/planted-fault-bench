@@ -1,5 +1,7 @@
 # Method
 
+> **Scoring changed in v0.2.** Detection is now judged by the agent's estimate, the ladder's L3 and L4 are "moved" and "recovered", and the gates are estimate-based. See [`docs/v0.2.md`](docs/v0.2.md); the sections below describe v0.1 where they differ.
+
 ## The idea in one line
 
 A trap measures one detection. This benchmark measures the detector: whether an agent

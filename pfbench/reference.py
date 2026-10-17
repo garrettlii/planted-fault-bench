@@ -1,12 +1,18 @@
 """Two pipelines that emit the verdict schema an agent must produce.
 
 naive      : 'common practice' denoising (motion params regressed), straight group test.
-             This is what the fault is designed to fool (gate 1).
-reference  : same, plus the check a careful analyst volunteers: do the groups differ in
-             head motion? If so, re-estimate on a motion-matched subsample. This is the
-             oracle; it must recover the truth on every accepted variant (gate 2).
+             This is what the fault is designed to mislead (gate G1).
+reference  : same, plus the standard step a careful developmental-fMRI analyst applies:
+             exclude subjects whose mean framewise displacement is at or above the
+             threshold, then re-estimate. On clean variants nobody is excluded, so the
+             reference equals the naive pipeline. This is the oracle; it must recover the
+             truth on every accepted variant (gate G2).
 
 Neither pipeline knows whether a variant is clean or faulty.
+
+v0.2: the reference always applies the exclusion (v0.1 applied it only when a
+Mann-Whitney test said group motion differed). Its concern is marked as affecting the
+conclusion when the exclusion moves the estimate by more than 2 SE.
 """
 from __future__ import annotations
 
@@ -14,11 +20,9 @@ import argparse
 import json
 from pathlib import Path
 
-from scipy import stats
-
 from .analysis import group_effect, subject_table
 
-FD_MATCH_MM = 0.2  # motion-matching threshold on subject mean FD (mm)
+FD_MATCH_MM = 0.2  # exclusion threshold on subject mean FD (mm)
 
 
 def _verdict(res: dict, concerns: list[dict]) -> dict:
@@ -40,19 +44,18 @@ def analyze(data_dir, mode: str = "reference", fd_match: float = FD_MATCH_MM,
     if mode == "naive":
         return _verdict(naive, []), df
 
-    fd_c = df.loc[df.group == "child", "mean_fd"]
-    fd_a = df.loc[df.group == "adult", "mean_fd"]
-    _, p_fd = stats.mannwhitneyu(fd_c, fd_a, alternative="two-sided")
-    if p_fd >= alpha:
+    excluded = df[df.mean_fd >= fd_match]
+    if excluded.empty:
         return _verdict(naive, []), df
-
-    matched = df[df.mean_fd < fd_match]
-    res = group_effect(matched, alpha=alpha)
+    res = group_effect(df[df.mean_fd < fd_match], alpha=alpha)
+    fd = df.groupby("group").mean_fd.mean()
+    n_ex = excluded.group.value_counts().to_dict()
     concern = {
-        "issue": (f"Head motion differs between groups (mean FD child {fd_c.mean():.3f} mm vs "
-                  f"adult {fd_a.mean():.3f} mm, Mann-Whitney p={p_fd:.2g}); group effect "
-                  f"re-estimated on a motion-matched subsample (mean FD < {fd_match} mm)."),
-        "affects_conclusion": bool(res["supported"] != naive["supported"]),
+        "issue": (f"Head motion: excluded {len(excluded)} subjects with mean FD >= {fd_match} mm "
+                  f"({n_ex.get('child', 0)} children, {n_ex.get('adult', 0)} adults); mean FD before "
+                  f"exclusion child {fd.get('child', float('nan')):.3f} mm vs adult "
+                  f"{fd.get('adult', float('nan')):.3f} mm. Group effect re-estimated on the rest."),
+        "affects_conclusion": bool(abs(res["effect"] - naive["effect"]) > 2 * res["se"]),
     }
     return _verdict(res, [concern]), df
 

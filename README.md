@@ -18,30 +18,36 @@ measurement of the detector. Design details: [`METHOD.md`](METHOD.md). Commands:
 
 ## What you get per agent
 
+Scoring v0.2 judges detection by what the agent *does*: whether its final estimate
+moves away from the naive estimate. What it *says* is scored separately. See
+[`docs/v0.2.md`](docs/v0.2.md).
+
 | Metric | Question it answers |
 |---|---|
 | level histogram (L0 to L5) | how far did it get on faulty tasks? |
-| d′ (sensitivity) | can it tell faulty from clean? |
-| c (bias) | does it over-flag or under-flag? |
-| threshold (mm of FD imbalance) | how faint a fault can it catch? |
+| d′ (sensitivity, behavior) | does it correct faulty analyses and leave clean ones alone? |
+| c (bias, behavior) | does it over-correct or under-correct? |
+| flag d′, report consistency | does it *say* the fault changed its answer exactly when it did? |
+| threshold (mm of FD imbalance) | how faint a fault does it correct? |
 | pass@k vs pass^k | does it succeed sometimes, or every time? |
 
 ## Simulated agents (selftest, synthetic pool, 8 clean + 8 faulty)
 
 ```
-agent       H      FA     d'     c      mean level   pass^k
-oracle      0.944  0.056  3.186  0.0    5.0          1.0
-naive       0.056  0.056  0.0    1.593  1.0          0.5
-paranoid    0.944  0.944  0.0   -1.593  5.0          0.5
-reciter     0.056  0.056  0.0    1.593  1.0          0.5
+agent          H      FA     d'     c       flag d'  report consistent  faulty levels
+oracle         0.944  0.056  3.186   0.0    3.186    1.0                8 x L5
+naive          0.056  0.056  0.0     1.593  0.0      1.0                8 x L1
+paranoid       0.944  0.056  3.186   0.0    0.0      0.5                8 x L5
+reciter        0.056  0.056  0.0     1.593  0.0      1.0                8 x L1
+overcorrector  0.944  0.944  0.0    -1.593  3.186    0.5                8 x L3
 ```
 
-`paranoid` always blames motion: it reaches L5 on every faulty task yet has zero
-sensitivity, because it false-alarms on every clean one. `naive` gets half the tasks
-"right" (the clean ones) with zero sensitivity. Neither accuracy nor level alone would
-have shown either failure. `reciter` names motion from memory but never checks the data,
-so it stops at L1. (Rates use the log-linear correction, so a perfect score shows as
-0.944 at n = 8.)
+`paranoid` analyzes correctly but blames motion everywhere: full behavior score,
+zero flag d′. That is the pattern GPT-6.1 Sol showed in v1-plain. `overcorrector` is the
+mirror image: its stated concerns are right, but it shifts every estimate, so it moves
+on clean tasks too and stops at L3 on faulty ones. Rewards follow behavior, so a
+`paranoid` agent earns full reward; its misreporting shows up only in the report metrics.
+(Rates use the log-linear correction, so a perfect score shows as 0.944 at n = 8.)
 
 ## Layout
 
@@ -54,7 +60,8 @@ pfbench/
   make_batch.py         seeded variant generator -> private Harbor task directories
   pool.py               builds the real-data pool from ds000228 (needs internet once)
   mock_pool.py          SYNTHETIC pool for smoke tests only
-  sdt.py, aggregate.py  d', c, psychometric threshold, pass^k
+  sdt.py, aggregate.py  d', c, psychometric threshold, pass^k, report calibration
+  rescore.py            re-score saved agent outputs with the current verifier
 template/               Harbor task template (instruction, Dockerfile, oracle, verifier)
 prompts/                generator-agent prompt for authoring new fault classes
 selftest/               end-to-end smoke test with simulated agents
@@ -62,5 +69,6 @@ selftest/               end-to-end smoke test with simulated agents
 
 ## Status
 
-v0.1: one fault class, tested end to end on synthetic data only. Not yet run on the real
-pool or with real agents. Read the limitations in `METHOD.md` before reporting numbers.
+v0.2: scoring changed to behavior-based detection (`docs/v0.2.md`), fixed before the
+next batch. One fault class. First real run (v1-plain, GPT-6.1 Sol, v0.1 scoring) in
+`RESULTS.md`.

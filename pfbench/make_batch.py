@@ -28,6 +28,7 @@ from .analysis import group_effect, subject_table
 from .reference import analyze
 
 REPO = Path(__file__).resolve().parent.parent
+SCORING_VERSION = "0.2"
 TEMPLATE = REPO / "template"
 
 
@@ -61,7 +62,7 @@ def draw(args, fault, table, truth):
         sub = table.set_index("subject").loc[draw_["subjects"]].reset_index()
         naive, _ = analyze(None, mode="naive", table=sub)
         ref, _ = analyze(None, mode="reference", table=sub)
-        res = gates.check(variant, truth, naive, ref, sub, fault)
+        res = gates.check(variant, truth, naive, ref, sub, fault, fault_margin=args.fault_margin)
         key = f"{variant}@{strength:g}"
         report[key + ":tried"] += 1
         if res["pass"]:
@@ -99,6 +100,8 @@ def write_task(task_dir: Path, a: dict, args, fault, table, truth, task_id: str)
     # tests: verifier + the label (copied in by Harbor only at verification time)
     shutil.copytree(TEMPLATE / "tests", task_dir / "tests")
     label = dict(task_id=task_id, batch=args.name, fault_class=fault.name,
+                 scoring_version=SCORING_VERSION, fault_margin=args.fault_margin,
+                 naive_gap_in_tol=round(a["gate"]["naive_gap_in_tol"], 3),
                  variant=a["variant"], strength=a["strength"],
                  strength_axis=round(a["strength_axis"], 4),
                  k_swapped=a["draw"]["meta"].get("k_swapped"), journal=bool(args.journal),
@@ -116,7 +119,8 @@ def end_to_end_check(task_dir: Path, label: dict, fault):
     v, _ = analyze(task_dir / "environment" / "data", mode="reference")
     ok = (v["claim_supported"] == label["reference"]["claim_supported"] and
           abs(v["effect_estimate"] - label["reference"]["effect_estimate"]) < 1e-9 and
-          gates.detected(v, fault.concern_regex) == (label["variant"] == "faulty"))
+          gates.moved(v["effect_estimate"], label["naive"]["effect_estimate"],
+                      label["recovery_tol"]) == (label["variant"] == "faulty"))
     if not ok:
         raise RuntimeError(f"materialized oracle disagrees with gated oracle in {task_dir}")
 
@@ -128,7 +132,10 @@ def main(argv=None):
     ap.add_argument("--fault", default="motion_group_confound")
     ap.add_argument("--n-clean", type=int, default=20)
     ap.add_argument("--n-faulty", type=int, default=20)
-    ap.add_argument("--strengths", default="0.25,0.5,0.75")
+    ap.add_argument("--strengths", default="0.3,0.4,0.5,0.6,0.7,0.8")
+    ap.add_argument("--fault-margin", type=float, default=gates.FAULT_MARGIN,
+                    help="G1: faulty naive estimate must sit > margin x tol from truth "
+                         "(>= 2 guarantees that correct recovery counts as detection)")
     ap.add_argument("--seed", type=int, default=20261014)
     ap.add_argument("--max-draws", type=int, default=2000)
     ap.add_argument("--name", default=None, help="batch name (default: out dir name)")
@@ -178,6 +185,7 @@ def main(argv=None):
     (out / "batch_report.json").write_text(json.dumps(
         dict(batch=args.name, fault=fault.name, seed=args.seed, pool_summary=summary,
              truth=truth, gate_report=report, accepted=dict(got), journal=args.journal,
+             scoring_version=SCORING_VERSION, fault_margin=args.fault_margin,
              synthetic_pool=synthetic), indent=2))
     print(f"[make_batch] wrote {len(accepted)} tasks to {out}")
     return 0
