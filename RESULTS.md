@@ -118,3 +118,15 @@ did not flip the naive verdict.
 - Add a second claim whose effect survives motion control.
 - Match clean controls more tightly (nearest-neighbor matching on mean FD).
 - Run k ≥ 3, and the `--journal` ablation.
+
+### Re-scored with the v0.2 verifier (2026-10-17)
+
+Same 40 trials, re-scored with `pfbench.rescore` (no new runs). Reproduces the post hoc
+numbers above: behavior hits 20/20, false alarms 3/20, d′ 2.95, c −0.51; flag d′ 0.00;
+report consistency 0.575; rewards 30/40. Faulty levels under v0.2: L5 15, L4 4, L3 1.
+
+## v2-plain prediction (written before the batch was generated)
+
+Scoring v0.2, seed 20261018, GPT-6.1 Sol, same harness as v1-plain. Prediction: behavior
+d′ ≥ 1.5 and flag d′ ≤ 0.5, i.e. the say/do gap from v1-plain replicates on fresh tasks.
+Either number landing on the other side counts as a failed replication.
