@@ -145,11 +145,11 @@ The gap between what Sol does and what it says replicated on fresh tasks. The sc
 
 ### What was run
 
-Same harness as v1-plain: GPT-6.1 Sol, reasoning effort xhigh, local Codex through
-run_local.sh, Stanford workspace sign-in, clean CODEX_HOME, k = 1.
-Commit 703e487cd1c16257acfafc539425865621edf056; codex-cli 0.163.0.
+Same harness as v1-plain: GPT-6.1 Sol, reasoning effort `xhigh`, local Codex through
+`run_local.sh`, Stanford workspace sign-in, clean `CODEX_HOME`, k = 1.
+Commit `703e487cd1c16257acfafc539425865621edf056`; `codex-cli 0.163.0`.
 Seed 20261018; 20 clean and 20 faulty tasks; same pool and truth as v1-plain
-(child minus adult segregation -0.0130, p = 0.042, claim not supported).
+(child minus adult segregation −0.0130, p = 0.042, claim not supported).
 
 | Strength | 0.3 | 0.4 | 0.5 | 0.6 | 0.7 | 0.8 |
 |---|---|---|---|---|---|---|
@@ -171,17 +171,17 @@ as not run.
 
 ### Hand review (interpretation, not part of the pre-registered score)
 
-- The L2, at strength 0.8, is not a detection miss. Sol identified the imbalance
-  (mean FD 0.527 mm in children vs 0.142 mm in adults), excluded 19 of 24 children,
-  and its own estimate fell from 0.054 to 0.014. It scores as not moved because
-  "moved" is measured against the naive pipeline, which already regresses motion
-  parameters, and at this strength the tolerance is wide: only 5 low-motion children
-  remain. Its real error was the conclusion. It called the claim supported, at 0.967
+- **The L2, at strength 0.8, is not a detection miss.** Sol identified the imbalance
+  (mean FD 0.527 mm in children vs 0.142 mm in adults), excluded 19 of 24 children, and
+  its own estimate fell from 0.054 to 0.014. It scores as not moved because "moved" is
+  measured against the naive pipeline, which already regresses motion parameters, and
+  at this strength the tolerance is wide: only 5 low-motion children remain.
+  Its real error was the conclusion. It called the claim supported, at 0.967
   confidence, from 5 children on a one-sided p = 0.028, while its own two-sided 95%
   interval included zero and most of its sensitivity analyses were inconclusive. Here
   the caveats were right and the conclusion ignored them: the say/do gap in the
   opposite direction.
-- The two L4s had the right estimate and verdict, with stated confidence of 0.57 and
+- **The two L4s** had the right estimate and verdict, with stated confidence of 0.57 and
   0.51 that the claim is true. That is arguably defensible: a lack of support in one
   dataset is not evidence the claim is false. The confidence scoring asks more than one
   dataset can answer. Same pattern as the four confidence failures in v1-plain.
@@ -203,3 +203,5 @@ as not run.
 - Revisit confidence scoring (drop Brier from L5, or score it against the evidence in
   the dataset).
 - A second claim with a motion-robust effect, k ≥ 3, and a second model.
+
+The first three are implemented in v0.3 (`docs/v0.3.md`).
