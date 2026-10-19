@@ -9,6 +9,7 @@ set -uo pipefail
 REPO="${REPO:-$HOME/planted-fault-bench}"
 AGENT_VENV="${AGENT_VENV:-$HOME/pf-venv}"                          # same Python Sol used
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR_BENCH:-$HOME/.claude-bench}"   # clean config
+export ENABLE_CLAUDEAI_MCP_SERVERS=false
 export CLAUDE_CODE_EFFORT_LEVEL="${EFFORT:-xhigh}"
 MODEL="${MODEL:-claude-opus-5-5}"
 RUNS="${RUNS:-$HOME/bench-claude}"                 # Claude's work folders
