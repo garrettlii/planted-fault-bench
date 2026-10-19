@@ -71,7 +71,7 @@ OUTPUT_DIR="$W/output" ANALYSIS_DIR="$W/analysis" LABEL="$T/tests/variant_label.
   LOG_DIR="$S/verifier" "$PY" -I -S "$T/tests/score.py" > /dev/null
 
 peeks=$(grep -c "private_batch\|variant_label\|MANIFEST\|pf-runs\|codex-bench\|bench-claude-scores" "$W/trajectory.jsonl")
-extras=$("$PY" -c "import json,sys; m=json.load(open(sys.argv[1])); print(len(m.get('mcp_servers') or []) + len(m.get('plugins') or []))" "$S/run_meta.json")
+extras=$("$PY" -c "import json,sys; m=json.load(open(sys.argv[1])); print(len(m.get('mcp_servers') or []) + sum(1 for x in (m.get('plugins') or []) if x.get('path') != 'builtin'))" "$S/run_meta.json")
 "$PY" - "$S/verifier/score.json" "$secs" "$S/run_meta.json" <<'EOF'
 import json, sys
 s = json.load(open(sys.argv[1])); m = json.load(open(sys.argv[3]))
@@ -80,5 +80,5 @@ print(f"   {s['variant']:6}  valid={s['valid']}  level={s['level']}  detected={s
 EOF
 if [ "$peeks" -ne 0 ] || [ "$extras" -ne 0 ]; then
   mv "$S/verifier" "$S/verifier.EXCLUDED"
-  echo "   EXCLUDED: answer-folder mentions=$peeks, MCP servers or plugins loaded=$extras (both must be 0)"
+  echo "   EXCLUDED: answer-folder mentions=$peeks, MCP servers or add-on plugins loaded=$extras (both must be 0)"
 fi
