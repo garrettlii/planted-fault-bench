@@ -3,15 +3,16 @@
 # grade it with the task's own verifier, and audit the log.
 #   usage: bash run_local.sh private_batch/pilot/PF-MOTION-XXXX
 set -uo pipefail
-REPO="${REPO:-$HOME/planted-fault-bench}"
-SOLVENV="${SOLVENV:-$HOME/pf-venv}"
+BASE="$(cd "$(dirname "$0")/.." && pwd)"   # the folder holding this repo, pf-venv and pf-runs
+REPO="${REPO:-$BASE/planted-fault-bench}"
+SOLVENV="${SOLVENV:-$BASE/pf-venv}"
 export CODEX_HOME="${CODEX_HOME_BENCH:-$HOME/.codex-bench}"
 export PATH="$SOLVENV/bin:$PATH"
 
 T="$(cd "$1" && pwd)" || { echo "no such task: $1"; exit 1; }
 ID="$(basename "$T")"
-W="$HOME/pf-runs/$ID"
-S="$HOME/pf-runs/scores/$ID"
+W="$BASE/pf-runs/$ID"
+S="$BASE/pf-runs/scores/$ID"
 rm -rf "$W" "$S"; mkdir -p "$W/output" "$W/analysis" "$S/verifier"
 cp -R "$T/environment/data" "$W/data"
 sed -e 's#/app/data#./data#g; s#/app/output#./output#g; s#/app/analysis#./analysis#g' \

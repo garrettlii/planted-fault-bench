@@ -6,14 +6,15 @@
 # Exit code 3 = the run did not happen (sign-in, limits, capacity, sandbox unavailable):
 # no grade is recorded, so a resume loop will retry it later.
 set -uo pipefail
-REPO="${REPO:-$HOME/planted-fault-bench}"
-AGENT_VENV="${AGENT_VENV:-$HOME/pf-venv}"                          # same Python Sol used
+BASE="$(cd "$(dirname "$0")/.." && pwd)"   # the folder holding this repo, pf-venv and the bench-claude folders
+REPO="${REPO:-$BASE/planted-fault-bench}"
+AGENT_VENV="${AGENT_VENV:-$BASE/pf-venv}"                          # same Python Sol used
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR_BENCH:-$HOME/.claude-bench}"   # clean config
 export ENABLE_CLAUDEAI_MCP_SERVERS=false
 export CLAUDE_CODE_EFFORT_LEVEL="${EFFORT:-xhigh}"
 MODEL="${MODEL:-claude-opus-5-5}"
-RUNS="${RUNS:-$HOME/bench-claude}"                 # Claude's work folders
-SCORES="${SCORES:-$HOME/bench-claude-scores}"      # grades: kept apart so the sandbox can deny it
+RUNS="${RUNS:-$BASE/bench-claude}"                 # Claude's work folders
+SCORES="${SCORES:-$BASE/bench-claude-scores}"      # grades: kept apart so the sandbox can deny it
 unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN   # use the sign-in, not a key
 export PATH="$AGENT_VENV/bin:$PATH"
 PY="$REPO/.venv/bin/python"

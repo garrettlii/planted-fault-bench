@@ -1,6 +1,6 @@
 """Re-score saved agent outputs with the current verifier (template/tests/score.py).
 
-    python -m pfbench.rescore --batch private_batch/v1-plain --runs ~/pf-runs --out ~/pf-runs-rescored
+    python -m pfbench.rescore --batch private_batch/v1-plain --runs ~/benchmarks/pf/pf-runs --out ~/benchmarks/pf/pf-runs-rescored
 
 For every task in --batch that has a work folder under --runs (as written by
 run_local.sh: <runs>/<TASK_ID>/output and /analysis), run the current verifier against
